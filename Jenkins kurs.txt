@@ -1,0 +1,52 @@
+### TWORZENIE AGENTA JAKO SERWIS DZIAŁAJĄCY W TLE (ALTERNATYWA ZAMIAST DOCKERA) ###
+
+1. utwórz użytkownika
+sudo useradd -m -s /bin/bash Jenkins
+
+2. utwórz katalogi
+sudo mkdir -p /opt/jenkins-agent
+sudo chown -R jenkins:jenkins /opt/jenkins-agent
+
+sudo mkdir -p /jenkins
+sudo chown -R jenkins:jenkins /jenkins
+sudo chmod 755 /jenkins
+
+3 utwórz agent.jar
+sudo -u jenkins bash -lc '
+cd /opt/jenkins-agent
+curl -fsSLO http://ADRES_MASTERA:8080/jnlpJars/agent.jar
+ls -la agent.jar
+'
+
+4. utwórz plik serwisu
+sudo nano /etc/systemd/system/jenkins-agent.service
+
+5. musi być taka zawartość pliku jenkins-agent.service
+[Unit]
+Description=Jenkins Agent (WebSocket)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jenkins
+Group=jenkins
+WorkingDirectory=/opt/jenkins-agent
+
+ExecStart=/usr/bin/java -jar /opt/jenkins-agent/agent.jar -url http://ADRES_MASTERA:8080/ -secret SECRET_TUTAJ -name NAZWA_TUTAJ -workDir /jenkins -webSocket
+
+Restart=always
+RestartSec=10
+SuccessExitStatus=143
+ 
+[Install]
+WantedBy=multi-user.target
+
+6. uruchomienie serwisu
+sudo systemctl daemon-reload
+sudo systemctl enable --now jenkins-agent
+
+7. weryfikacja
+systemctl is-enabled jenkins-agent
+systemctl is-active jenkins-agent
+systemctl status jenkins-agent --no-pager
